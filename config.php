@@ -1,7 +1,12 @@
 <?php
-// config.php - Ajusta DB_USER y DB_PASS según tu entorno local
+// config.php
 session_start();
 date_default_timezone_set('Europe/Madrid');
+
+// CAMBIA ESTO SI TU CARPETA SE LLAMA DIFERENTE
+// Si entras por http://localhost/gimnasio-tfc/, el valor debe ser '/gimnasio-tfc'
+// Si usas un host virtual o estás en la raíz, pon '' (vacío).
+define('BASE_URL', '/gimnasio-tfc');
 
 define('DB_HOST','127.0.0.1');
 define('DB_NAME','gimnasiodb');

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config.php';
 session_unset();
 session_destroy();
-header('Location: /public/index.php');
+// Redirigir usando BASE_URL
+header('Location: ' . BASE_URL . '/public/index.php');
 exit;
 ?>

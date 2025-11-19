@@ -1,6 +1,6 @@
 <?php
-// templates/header.php
 if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../config.php'; // Aseguramos cargar la config para usar BASE_URL
 $usuario = $_SESSION['usuario'] ?? null;
 ?>
 <!DOCTYPE html>
@@ -9,30 +9,32 @@ $usuario = $_SESSION['usuario'] ?? null;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Gimnasio TFC</title>
-<link rel="stylesheet" href="/gimnasio-tfc/public/style.css">
+  <link rel="stylesheet" href="<?=BASE_URL?>/public/style.css">
 </head>
 <body>
 <header class="site-header">
   <div class="container header-inner">
-    <a class="logo" href="/public/index.php">GIMNASIO TFC</a>
+    <a class="logo" href="<?=BASE_URL?>/public/index.php">GIMNASIO TFC</a>
+    
     <nav class="main-nav" aria-label="Menú principal">
       <button id="navToggle" class="nav-toggle" aria-expanded="false">☰</button>
       <ul id="navList" class="nav-list">
-        <li><a href="/public/index.php#clases">Clases</a></li>
-        <li><a href="/public/index.php#eventos">Eventos</a></li>
-        <li><a href="/public/index.php#contacto">Contacto</a></li>
+        <li><a href="<?=BASE_URL?>/public/index.php#clases">Clases</a></li>
+        <li><a href="<?=BASE_URL?>/public/index.php#footer">Contacto</a></li>
       </ul>
     </nav>
 
     <div class="header-actions">
       <?php if(!$usuario): ?>
-        <a class="btn-outline" href="/gimnasio-tfc/public/login.php">Iniciar sesión / Registrarse</a>
+        <a class="btn-outline" href="<?=BASE_URL?>/public/login.php">Entrar / Registro</a>
       <?php else: ?>
         <div class="user-menu">
-          <button id="userMenuBtn" class="btn-outline"><?=htmlspecialchars($usuario['nombre'])?> ▾</button>
+          <button id="userMenuBtn" class="btn-outline" type="button">
+            <?=htmlspecialchars($usuario['nombre'])?> ▾
+          </button>
           <div id="userDropdown" class="dropdown" aria-hidden="true">
-            <a href="/dashboard/<?=htmlspecialchars($usuario['rol'])?>.php">Mi panel</a>
-            <a href="/public/logout.php">Cerrar sesión</a>
+            <a href="<?=BASE_URL?>/dashboard/<?=htmlspecialchars($usuario['rol'])?>.php">Mi Panel</a>
+            <a href="<?=BASE_URL?>/public/logout.php">Cerrar sesión</a>
           </div>
         </div>
       <?php endif; ?>
