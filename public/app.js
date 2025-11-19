@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', ()=>{
-  // Toggle menu movil
+  // 1. Lógica del menú móvil (hamburguesa)
   const navToggle = document.getElementById('navToggle');
   const navList = document.getElementById('navList');
   if(navToggle && navList){
@@ -9,21 +9,26 @@ document.addEventListener('DOMContentLoaded', ()=>{
     });
   }
 
-  // Toggle dropdown usuario
+  // 2. Lógica del menú de usuario (Ibai ▾)
   const userBtn = document.getElementById('userMenuBtn');
   const userDropdown = document.getElementById('userDropdown');
   
   if(userBtn && userDropdown){
-    userBtn.addEventListener('click', (e)=>{
-      e.stopPropagation(); // Evita que el click cierre inmediatamente si hubiera un listener en window
+    // Función para alternar la visibilidad
+    const toggleDropdown = (e) => {
+      e.stopPropagation(); // Previene que el click llegue al listener de la ventana
       const isHidden = userDropdown.getAttribute('aria-hidden') === 'true';
-      // Cambiamos el estado
       userDropdown.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
-    });
+    };
 
-    // Cerrar al hacer click fuera
-    window.addEventListener('click', (e)=>{
-      if(!userBtn.contains(e.target) && !userDropdown.contains(e.target)){
+    userBtn.addEventListener('click', toggleDropdown);
+
+    // Lógica para cerrar el menú si se hace click fuera
+    window.addEventListener('click', (e) => {
+      // Si el click no es ni en el botón ni en el menú desplegable, lo ocultamos
+      if (userDropdown.getAttribute('aria-hidden') === 'false' && 
+          !userBtn.contains(e.target) && 
+          !userDropdown.contains(e.target)) {
         userDropdown.setAttribute('aria-hidden', 'true');
       }
     });

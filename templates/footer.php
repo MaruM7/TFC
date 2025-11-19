@@ -3,6 +3,6 @@
     <p>© <?=date('Y')?> Gimnasio Artes Marciales — Proyecto TFC</p>
   </div>
 </footer>
-<script src="/public/app.js"></script>
+<script src="<?=BASE_URL?>/public/app.js"></script>
 </body>
 </html>
