@@ -21,21 +21,26 @@ body{
 
 /* HEADER */
 .site-header{position:fixed;top:0;left:0;right:0;padding:12px 0;z-index:100;background:linear-gradient(180deg, rgba(2,6,23,0.9), rgba(2,6,23,0.8));backdrop-filter: blur(6px); border-bottom: 1px solid rgba(255,255,255,0.05);}
-.header-inner{display:flex;align-items:center;justify-content:space-between; padding-top: 0 !important;} /* Override container padding */
+.header-inner{display:flex;align-items:center;justify-content:space-between; padding-top: 0 !important;}
 .logo{font-weight:700;letter-spacing:2px;color:var(--white);text-decoration:none}
 
-/* NAV */
-.main-nav .nav-list{display:flex;gap:16px;list-style:none;margin:0;padding:0}
+/* NAV - Simplificado (sin menú móvil oculto) */
+.main-nav .nav-list{display:flex;gap:16px;list-style:none;margin:0;padding:0; align-items: center;}
 .main-nav a{color:var(--muted);text-decoration:none;padding:8px 10px;border-radius:8px; transition:0.2s;}
 .main-nav a:hover{color:var(--white);background:var(--glass)}
+
+/* En pantallas muy pequeñas, permitimos que el menú baje si no cabe */
+@media(max-width: 600px) {
+  .header-inner { flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .main-nav { order: 2; width: 100%; display: flex; justify-content: center; }
+  .header-actions { position: absolute; right: 20px; top: 12px; }
+}
 
 /* BOTONES */
 .btn-primary{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:10px;cursor:pointer; text-decoration:none; display:inline-block;}
 .btn-primary:hover{background:#1b3bdd;}
 .btn-outline{background:transparent;border:1px solid rgba(255,255,255,0.1);color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer; text-decoration:none; display:inline-block;}
 .btn-outline:hover{border-color:var(--white); background:var(--glass);}
-.btn-danger { background: transparent; border:1px solid rgba(255,80,80,0.4); color:#ff7b7b; padding:6px 10px; border-radius:8px; cursor:pointer;}
-.btn-danger:hover { background: rgba(255,0,0,0.1); }
 
 /* HERO */
 .hero{min-height:60vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px 20px}
@@ -51,12 +56,12 @@ body{
 .card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.1); }
 .card h3 { margin-top:0; color: var(--accent-2); }
 
-/* MENU USUARIO Y DROPDOWN (ARREGLADO) */
+/* MENU USUARIO Y DROPDOWN (IMPORTANTE) */
 .user-menu{position:relative; display: inline-block;}
 .dropdown{
   position:absolute;
   right:0;
-  top:100%; /* Justo debajo del botón */
+  top:100%;
   margin-top: 8px;
   background:#0b1a2b;
   border: 1px solid rgba(255,255,255,0.1);
@@ -67,7 +72,7 @@ body{
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   z-index: 200;
 }
-/* ESTA ES LA REGLA QUE FALTABA */
+/* ESTA ES LA REGLA QUE HACE QUE SE VEA AL HACER CLICK */
 .dropdown[aria-hidden="false"] {
   display: block;
 }
@@ -81,12 +86,3 @@ body{
 .table { width:100%; border-collapse: collapse; margin-top:20px; }
 .table th, .table td { padding:12px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.05); }
 .table th { color:var(--muted); font-size:14px; text-transform: uppercase; letter-spacing: 1px; }
-.card-small { padding:16px; display:flex; flex-direction:column; align-items:start; gap:10px;}
-
-/* MOBILE NAV */
-.nav-toggle { display:none; background:none; border:none; color:#fff; font-size:24px; cursor:pointer; }
-@media(max-width:800px){
-  .nav-toggle { display:block; }
-  .main-nav .nav-list{display:none;position:absolute;top:60px;right:20px;background:#0b1a2b;padding:16px;border-radius:12px; border:1px solid rgba(255,255,255,0.1); min-width: 200px;}
-  .main-nav .nav-list.open{display:flex;flex-direction:column;}
-}

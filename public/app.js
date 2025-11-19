@@ -1,35 +1,31 @@
 document.addEventListener('DOMContentLoaded', ()=>{
-  // 1. Lógica del menú móvil (hamburguesa)
-  const navToggle = document.getElementById('navToggle');
-  const navList = document.getElementById('navList');
-  if(navToggle && navList){
-    navToggle.addEventListener('click', ()=>{
-      const open = navList.classList.toggle('open');
-      navToggle.setAttribute('aria-expanded', open);
-    });
-  }
-
-  // 2. Lógica del menú de usuario (Ibai ▾)
+  // Referencias a los elementos del menú de usuario
   const userBtn = document.getElementById('userMenuBtn');
   const userDropdown = document.getElementById('userDropdown');
   
+  // Solo ejecutamos si los elementos existen en la página
   if(userBtn && userDropdown){
-    // Función para alternar la visibilidad
+    
+    // 1. Función para abrir/cerrar al hacer click en el nombre
     const toggleDropdown = (e) => {
-      e.stopPropagation(); // Previene que el click llegue al listener de la ventana
+      e.stopPropagation(); // Evita conflictos con el click de window
       const isHidden = userDropdown.getAttribute('aria-hidden') === 'true';
+      // Cambiamos el estado: si está hidden (true) pasa a visible (false) y viceversa
       userDropdown.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
     };
 
+    // Asignamos el evento al botón
     userBtn.addEventListener('click', toggleDropdown);
 
-    // Lógica para cerrar el menú si se hace click fuera
+    // 2. Función para cerrar si hacemos click fuera del menú
     window.addEventListener('click', (e) => {
-      // Si el click no es ni en el botón ni en el menú desplegable, lo ocultamos
-      if (userDropdown.getAttribute('aria-hidden') === 'false' && 
-          !userBtn.contains(e.target) && 
-          !userDropdown.contains(e.target)) {
-        userDropdown.setAttribute('aria-hidden', 'true');
+      // Si el menú está visible...
+      if (userDropdown.getAttribute('aria-hidden') === 'false') {
+        // Y el click NO fue en el botón NI dentro del menú...
+        if (!userBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+          // Entonces cerramos el menú
+          userDropdown.setAttribute('aria-hidden', 'true');
+        }
       }
     });
   }

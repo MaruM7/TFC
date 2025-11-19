@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
-require_once __DIR__ . '/../config.php'; // Aseguramos cargar la config para usar BASE_URL
+require_once __DIR__ . '/../config.php'; // Asegura carga de BASE_URL
 $usuario = $_SESSION['usuario'] ?? null;
 ?>
 <!DOCTYPE html>
@@ -17,7 +17,6 @@ $usuario = $_SESSION['usuario'] ?? null;
     <a class="logo" href="<?=BASE_URL?>/public/index.php">GIMNASIO TFC</a>
     
     <nav class="main-nav" aria-label="Menú principal">
-      <button id="navToggle" class="nav-toggle" aria-expanded="false">☰</button>
       <ul id="navList" class="nav-list">
         <li><a href="<?=BASE_URL?>/public/index.php#clases">Clases</a></li>
         <li><a href="<?=BASE_URL?>/public/index.php#footer">Contacto</a></li>
