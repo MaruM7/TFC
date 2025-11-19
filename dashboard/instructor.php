@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/../config.php';
-if(!isset($_SESSION['usuario'])){ header('Location: /public/login.php'); exit; }
-if($_SESSION['usuario']['rol'] !== 'instructor'){ header('Location: /public/index.php'); exit; }
+// CORREGIDO: Redirecciones con BASE_URL
+if(!isset($_SESSION['usuario'])){ header('Location: ' . BASE_URL . '/public/login.php'); exit; }
+if($_SESSION['usuario']['rol'] !== 'instructor'){ header('Location: ' . BASE_URL . '/public/index.php'); exit; }
 $uid = $_SESSION['usuario']['id'];
 
 $stmt = $pdo->prepare('SELECT cl.*, d.nombre as disciplina FROM clases cl JOIN disciplinas d ON cl.disciplina_id = d.id WHERE cl.instructor_id = :uid ORDER BY cl.fecha_hora DESC');
@@ -21,7 +22,7 @@ require_once __DIR__ . '/../templates/header.php';
           <p><?=htmlspecialchars($c['descripcion'])?></p>
           <p><?=htmlspecialchars(date('d/m/Y H:i', strtotime($c['fecha_hora'])))?></p>
           <p>Cupo: <?=htmlspecialchars($c['cupo'])?></p>
-          <a class="btn-outline" href="/admin/clases.php?clase_id=<?=htmlspecialchars($c['id'])?>">Ver inscritos</a>
+          <a class="btn-outline" href="<?=BASE_URL?>/admin/clases.php?clase_id=<?=htmlspecialchars($c['id'])?>">Ver inscritos</a>
         </div>
       <?php endforeach; ?>
     </div>

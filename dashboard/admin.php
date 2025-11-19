@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/../config.php';
-if(!isset($_SESSION['usuario'])){ header('Location: /public/login.php'); exit; }
-if($_SESSION['usuario']['rol'] !== 'admin'){ header('Location: /public/index.php'); exit; }
+// CORREGIDO: Redirecciones con BASE_URL
+if(!isset($_SESSION['usuario'])){ header('Location: ' . BASE_URL . '/public/login.php'); exit; }
+if($_SESSION['usuario']['rol'] !== 'admin'){ header('Location: ' . BASE_URL . '/public/index.php'); exit; }
 
 // resumen
 $u = $pdo->query("SELECT COUNT(*) as total FROM usuarios")->fetch();
@@ -14,8 +15,8 @@ require_once __DIR__ . '/../templates/header.php';
   <h1>Panel Admin</h1>
   <section>
     <div style="display:flex;gap:20px">
-      <div class="card card-small"><h3>Usuarios</h3><p><?=htmlspecialchars($u['total'])?></p><a class="btn-outline" href="/admin/users.php">Gestionar</a></div>
-      <div class="card card-small"><h3>Clases</h3><p><?=htmlspecialchars($cl['total'])?></p><a class="btn-outline" href="/admin/clases.php">Gestionar</a></div>
+      <div class="card card-small"><h3>Usuarios</h3><p><?=htmlspecialchars($u['total'])?></p><a class="btn-outline" href="<?=BASE_URL?>/admin/users.php">Gestionar</a></div>
+      <div class="card card-small"><h3>Clases</h3><p><?=htmlspecialchars($cl['total'])?></p><a class="btn-outline" href="<?=BASE_URL?>/admin/clases.php">Gestionar</a></div>
     </div>
   </section>
 

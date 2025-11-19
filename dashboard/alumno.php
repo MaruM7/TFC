@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/../config.php';
-if(!isset($_SESSION['usuario'])){ header('Location: /public/login.php'); exit; }
-if($_SESSION['usuario']['rol'] !== 'alumno'){ header('Location: /public/index.php'); exit; }
+// CORREGIDO: Rutas con BASE_URL
+if(!isset($_SESSION['usuario'])){ header('Location: ' . BASE_URL . '/public/login.php'); exit; }
+if($_SESSION['usuario']['rol'] !== 'alumno'){ header('Location: ' . BASE_URL . '/public/index.php'); exit; }
 
 $uid = $_SESSION['usuario']['id'];
 
@@ -48,7 +49,7 @@ require_once __DIR__ . '/../templates/header.php';
             <td><?=htmlspecialchars(date('d/m/Y H:i', strtotime($ins['fecha_inscripcion'])))?></td>
             <td><?=htmlspecialchars($ins['estado'])?></td>
             <td>
-              <form method="POST" action="/public/cancelar_inscripcion.php" style="display:inline">
+              <form method="POST" action="<?=BASE_URL?>/public/cancelar_inscripcion.php" style="display:inline">
                 <input type="hidden" name="id" value="<?=htmlspecialchars($ins['id'])?>" />
                 <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($_SESSION['csrf_token'])?>" />
                 <button class="btn-outline" type="submit">Cancelar</button>
