@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../config.php';
-// CORREGIDO: Rutas con BASE_URL
 if(!isset($_SESSION['usuario'])){ header('Location: ' . BASE_URL . '/public/login.php'); exit; }
 if($_SESSION['usuario']['rol'] !== 'alumno'){ header('Location: ' . BASE_URL . '/public/index.php'); exit; }
 
@@ -12,6 +11,7 @@ $stmt->execute(['uid'=>$uid]);
 $rankings = $stmt->fetchAll();
 
 // inscripciones
+// La consulta trae inscripciones, aunque la clase_id sea NULL (si la clase fue eliminada)
 $stmt = $pdo->prepare('SELECT i.*, cl.fecha_hora, d.nombre as disciplina FROM inscripciones i LEFT JOIN clases cl ON i.clase_id = cl.id LEFT JOIN disciplinas d ON cl.disciplina_id = d.id WHERE i.usuario_id = :uid ORDER BY i.fecha_inscripcion DESC');
 $stmt->execute(['uid'=>$uid]);
 $inscripciones = $stmt->fetchAll();
@@ -41,19 +41,23 @@ require_once __DIR__ . '/../templates/header.php';
     <h2>Mis inscripciones</h2>
     <?php if($inscripciones): ?>
       <table class="table">
-        <thead><tr><th>Clase</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Clase</th><th>Fecha de Clase</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
         <?php foreach($inscripciones as $ins): ?>
           <tr>
-            <td><?=htmlspecialchars($ins['disciplina'])?></td>
-            <td><?=htmlspecialchars(date('d/m/Y H:i', strtotime($ins['fecha_inscripcion'])))?></td>
+            <td><?= $ins['disciplina'] ? htmlspecialchars($ins['disciplina']) : 'Clase Eliminada' ?></td>
+            <td><?= $ins['fecha_hora'] ? htmlspecialchars(date('d/m/Y H:i', strtotime($ins['fecha_hora']))) : 'Indisponible' ?></td>
             <td><?=htmlspecialchars($ins['estado'])?></td>
             <td>
-              <form method="POST" action="<?=BASE_URL?>/public/cancelar_inscripcion.php" style="display:inline">
-                <input type="hidden" name="id" value="<?=htmlspecialchars($ins['id'])?>" />
-                <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($_SESSION['csrf_token'])?>" />
-                <button class="btn-outline" type="submit">Cancelar</button>
-              </form>
+              <?php if($ins['clase_id']): ?>
+                <form method="POST" action="<?=BASE_URL?>/public/cancelar_inscripcion.php" style="display:inline">
+                  <input type="hidden" name="id" value="<?=htmlspecialchars($ins['id'])?>" />
+                  <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($_SESSION['csrf_token'])?>" />
+                  <button class="btn-outline" type="submit">Cancelar</button>
+                </form>
+              <?php else: ?>
+                <span style="color:#666;">Eliminada</span>
+              <?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>

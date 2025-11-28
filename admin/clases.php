@@ -1,6 +1,41 @@
 <?php
 require_once __DIR__ . '/../config.php';
-if(!isset($_SESSION['usuario']) || ($_SESSION['usuario']['rol'] !== 'admin' && $_SESSION['usuario']['rol'] !== 'instructor')){ header('Location: /public/index.php'); exit; }
+// CORREGIDO: Usar BASE_URL en el redirect
+if(!isset($_SESSION['usuario']) || ($_SESSION['usuario']['rol'] !== 'admin' && $_SESSION['usuario']['rol'] !== 'instructor')){ header('Location: ' . BASE_URL . '/public/index.php'); exit; }
+
+// Manejo de mensajes de sesión (para confirmar el borrado)
+$msg = $_SESSION['msg'] ?? null;
+unset($_SESSION['msg']);
+
+// ELIMINAR CLASE (POST handler para el administrador)
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_class'){
+  // Comprobación de seguridad
+  if(!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) { die('CSRF'); }
+  
+  // Solo el administrador puede eliminar la clase completa
+  if ($_SESSION['usuario']['rol'] !== 'admin') {
+      $_SESSION['msg'] = 'No tienes permiso para realizar esta acción.';
+      header('Location: clases.php');
+      exit;
+  }
+  
+  $cid = (int)$_POST['clase_id'];
+  
+  // 1. [Placeholder de Notificación]: Aquí se implementaría la lógica para notificar a los alumnos
+  // (e.g., obteniendo la lista de emails de inscripciones y enviando correos).
+  
+  // 2. Ejecutar DELETE. Las restricciones FOREIGN KEY en SQL se encargan de:
+  //    - Eliminar entradas en la tabla 'asistencia' (CASCADE).
+  //    - Poner a NULL la columna 'clase_id' en 'inscripciones' (SET NULL).
+  $pdo->prepare("DELETE FROM clases WHERE id = :cid")->execute([':cid'=>$cid]);
+  
+  // 3. Mensaje de confirmación (el placeholder de la notificación)
+  $_SESSION['msg'] = '✅ Clase y sus inscripciones asociadas han sido eliminadas correctamente.';
+
+  // 4. Redirigir a la lista principal
+  header('Location: clases.php');
+  exit;
+}
 
 $clase_id = (int)($_GET['clase_id'] ?? 0);
 
@@ -53,6 +88,7 @@ require_once __DIR__ . '/../templates/header.php';
 ?>
 <main class="container">
   <h1>Gestión de Clases</h1>
+  <?php if($msg): ?><p style="color:#a0ff9b; background:rgba(0,255,0,0.1); padding:10px; border-radius:5px; margin-bottom: 20px;"><?=$msg?></p><?php endif; ?>
   <?php if(!$clase_id): ?>
     <h2>Clases</h2>
     <div class="cards-grid">
@@ -62,6 +98,16 @@ require_once __DIR__ . '/../templates/header.php';
           <p><?=htmlspecialchars($c['descripcion'])?></p>
           <p><?=htmlspecialchars(date('d/m/Y H:i', strtotime($c['fecha_hora'])))?></p>
           <a class="btn-outline" href="clases.php?clase_id=<?=htmlspecialchars($c['id'])?>">Ver inscritos</a>
+          
+          <?php if ($_SESSION['usuario']['rol'] === 'admin'): ?>
+          <form method="POST" style="display:inline; margin-left: 10px;" onsubmit="return confirm('ATENCIÓN: ¿Está seguro de que desea eliminar esta clase? Esto cancelará todas las inscripciones asociadas.');">
+              <input type="hidden" name="action" value="delete_class" />
+              <input type="hidden" name="clase_id" value="<?=htmlspecialchars($c['id'])?>" />
+              <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($_SESSION['csrf_token'])?>" />
+              <button class="btn-danger" type="submit">Eliminar Clase</button>
+          </form>
+          <?php endif; ?>
+          
         </div>
       <?php endforeach; ?>
     </div>
