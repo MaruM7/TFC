@@ -1,143 +1,119 @@
 <?php
 require_once __DIR__ . '/../config.php';
-// CORREGIDO: Usar BASE_URL en el redirect
-if(!isset($_SESSION['usuario']) || ($_SESSION['usuario']['rol'] !== 'admin' && $_SESSION['usuario']['rol'] !== 'instructor')){ header('Location: ' . BASE_URL . '/public/index.php'); exit; }
+if(!isset($_SESSION['usuario']) || ($_SESSION['usuario']['rol'] !== 'admin' && $_SESSION['usuario']['rol'] !== 'instructor')){ header('Location: ../public/index.php'); exit; }
 
-// Manejo de mensajes de sesión (para confirmar el borrado)
-$msg = $_SESSION['msg'] ?? null;
-unset($_SESSION['msg']);
+$msg = $_SESSION['msg'] ?? null; unset($_SESSION['msg']);
 
-// ELIMINAR CLASE (POST handler para el administrador)
-if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_class'){
-  // Comprobación de seguridad
-  if(!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) { die('CSRF'); }
-  
-  // Solo el administrador puede eliminar la clase completa
-  if ($_SESSION['usuario']['rol'] !== 'admin') {
-      $_SESSION['msg'] = 'No tienes permiso para realizar esta acción.';
-      header('Location: clases.php');
-      exit;
-  }
-  
-  $cid = (int)$_POST['clase_id'];
-  
-  // 1. [Placeholder de Notificación]: Aquí se implementaría la lógica para notificar a los alumnos
-  // (e.g., obteniendo la lista de emails de inscripciones y enviando correos).
-  
-  // 2. Ejecutar DELETE. Las restricciones FOREIGN KEY en SQL se encargan de:
-  //    - Eliminar entradas en la tabla 'asistencia' (CASCADE).
-  //    - Poner a NULL la columna 'clase_id' en 'inscripciones' (SET NULL).
-  $pdo->prepare("DELETE FROM clases WHERE id = :cid")->execute([':cid'=>$cid]);
-  
-  // 3. Mensaje de confirmación (el placeholder de la notificación)
-  $_SESSION['msg'] = '✅ Clase y sus inscripciones asociadas han sido eliminadas correctamente.';
+// 1. PROCESAR ACCIONES (ELIMINAR / ASISTENCIA)
+if($_SERVER['REQUEST_METHOD'] === 'POST'){
+    if(!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) die('CSRF Error');
+    
+    if($_POST['action'] === 'delete' && $_SESSION['usuario']['rol'] === 'admin'){
+        $pdo->prepare("DELETE FROM clases WHERE id = ?")->execute([$_POST['clase_id']]);
+        $_SESSION['msg'] = "✅ Clase eliminada con éxito.";
+        header('Location: clases.php'); exit;
+    }
 
-  // 4. Redirigir a la lista principal
-  header('Location: clases.php');
-  exit;
+    if($_POST['action'] === 'marcar'){
+        $pts = $pdo->query("SELECT valor FROM configuracion WHERE clave = 'puntos_por_asistencia'")->fetchColumn() ?: 5;
+        $pdo->prepare("INSERT IGNORE INTO asistencia (clase_id, usuario_id, puntos_otorgados) VALUES (?, ?, ?)")->execute([$_POST['clase_id'], $_POST['usuario_id'], $pts]);
+        
+        $did = $pdo->prepare("SELECT disciplina_id FROM clases WHERE id = ?"); $did->execute([$_POST['clase_id']]);
+        $disc = $did->fetchColumn();
+
+        $pdo->prepare("INSERT INTO ranking (usuario_id, disciplina_id, puntos) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE puntos = puntos + ?")
+            ->execute([$_POST['usuario_id'], $disc, $pts, $pts]);
+        
+        $_SESSION['msg'] = "✅ Asistencia marcada y puntos otorgados.";
+        header("Location: clases.php?clase_id=".$_POST['clase_id']); exit;
+    }
 }
+
+// 2. CONSULTAS ESTADÍSTICAS
+$alumnosActivos = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol = 'alumno' AND activo = 1")->fetchColumn();
+$ingresosMes = $pdo->query("SELECT SUM(CASE WHEN plan_nombre='Mensual' THEN monto WHEN plan_nombre='Trimestral' THEN monto/3 WHEN plan_nombre='Anual' THEN monto/12 ELSE 0 END) FROM suscripciones WHERE estado='activo'")->fetchColumn() ?: 0;
+$proxima = $pdo->query("SELECT d.nombre FROM clases c JOIN disciplinas d ON c.disciplina_id=d.id WHERE fecha_hora >= NOW() ORDER BY fecha_hora ASC LIMIT 1")->fetchColumn() ?: 'Ninguna';
 
 $clase_id = (int)($_GET['clase_id'] ?? 0);
-
-if(!$clase_id){
-  // lista de clases
-  $stmt = $pdo->query('SELECT cl.*, d.nombre as disciplina FROM clases cl JOIN disciplinas d ON cl.disciplina_id = d.id ORDER BY fecha_hora DESC');
-  $clases = $stmt->fetchAll();
-} else {
-  // inscritos
-  $stmt = $pdo->prepare('SELECT i.*, u.nombre, u.apellidos, u.email, cl.fecha_hora FROM inscripciones i JOIN usuarios u ON i.usuario_id = u.id JOIN clases cl ON i.clase_id = cl.id WHERE i.clase_id = :cid');
-  $stmt->execute(['cid'=>$clase_id]);
-  $ins = $stmt->fetchAll();
-  $clInfo = $pdo->prepare('SELECT cl.*, d.nombre as disciplina FROM clases cl JOIN disciplinas d ON cl.disciplina_id = d.id WHERE cl.id = :id');
-  $clInfo->execute(['id'=>$clase_id]);
-  $cldata = $clInfo->fetch();
-}
-
-// marcar asistencia (POST)
-if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'marcar'){
-  if(!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) die('CSRF');
-  $uid = (int)$_POST['usuario_id'];
-  $cid = (int)$_POST['clase_id'];
-  // insertar asistencia si no existe
-  $insCheck = $pdo->prepare('SELECT id FROM asistencia WHERE usuario_id = :uid AND clase_id = :cid');
-  $insCheck->execute(['uid'=>$uid,'cid'=>$cid]);
-  if(!$insCheck->fetch()){
-    // puntos por asistencia desde configuracion
-    $cfg = $pdo->prepare('SELECT valor FROM configuracion WHERE clave = :k LIMIT 1');
-    $cfg->execute(['k'=>'puntos_por_asistencia']);
-    $p = (int)$cfg->fetchColumn();
-    $pdo->prepare('INSERT INTO asistencia (clase_id, usuario_id, presente, puntos_otorgados) VALUES (:cid, :uid, 1, :pts)')->execute(['cid'=>$cid,'uid'=>$uid,'pts'=>$p]);
-    // actualizar ranking (sumar puntos)
-    // comprobar si hay entrada en ranking
-    $rk = $pdo->prepare('SELECT id FROM ranking WHERE usuario_id = :uid AND disciplina_id = (SELECT disciplina_id FROM clases WHERE id = :cid) LIMIT 1');
-    $rk->execute(['uid'=>$uid,'cid'=>$cid]);
-    $rkRow = $rk->fetch();
-    if($rkRow){
-      $pdo->prepare('UPDATE ranking SET puntos = puntos + :pts WHERE id = :rid')->execute(['pts'=>$p,'rid'=>$rkRow['id']]);
-    } else {
-      // crear ranking si no existe
-      $disc = $pdo->prepare('SELECT disciplina_id FROM clases WHERE id = :cid LIMIT 1'); $disc->execute(['cid'=>$cid]); $did = $disc->fetchColumn();
-      $pdo->prepare('INSERT INTO ranking (usuario_id, disciplina_id, puntos) VALUES (:uid, :did, :pts)')->execute(['uid'=>$uid,'did'=>$did,'pts'=>$p]);
-    }
-  }
-  header('Location: clases.php?clase_id=' . $cid);
-  exit;
-}
-
 require_once __DIR__ . '/../templates/header.php';
 ?>
+
 <main class="container">
-  <h1>Gestión de Clases</h1>
-  <?php if($msg): ?><p style="color:#a0ff9b; background:rgba(0,255,0,0.1); padding:10px; border-radius:5px; margin-bottom: 20px;"><?=$msg?></p><?php endif; ?>
-  <?php if(!$clase_id): ?>
-    <h2>Clases</h2>
-    <div class="cards-grid">
-      <?php foreach($clases as $c): ?>
-        <div class="card">
-          <h3><?=htmlspecialchars($c['disciplina'])?></h3>
-          <p><?=htmlspecialchars($c['descripcion'])?></p>
-          <p><?=htmlspecialchars(date('d/m/Y H:i', strtotime($c['fecha_hora'])))?></p>
-          <a class="btn-outline" href="clases.php?clase_id=<?=htmlspecialchars($c['id'])?>">Ver inscritos</a>
-          
-          <?php if ($_SESSION['usuario']['rol'] === 'admin'): ?>
-          <form method="POST" style="display:inline; margin-left: 10px;" onsubmit="return confirm('ATENCIÓN: ¿Está seguro de que desea eliminar esta clase? Esto cancelará todas las inscripciones asociadas.');">
-              <input type="hidden" name="action" value="delete_class" />
-              <input type="hidden" name="clase_id" value="<?=htmlspecialchars($c['id'])?>" />
-              <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($_SESSION['csrf_token'])?>" />
-              <button class="btn-danger" type="submit">Eliminar Clase</button>
-          </form>
-          <?php endif; ?>
-          
+    <h1>Panel de Administración</h1>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px;">
+        <div class="card" style="border-left: 4px solid var(--accent-2);">
+            <small>Alumnos Activos</small>
+            <div style="font-size: 1.8rem; font-weight: bold;"><?= $alumnosActivos ?></div>
         </div>
-      <?php endforeach; ?>
+        <div class="card" style="border-left: 4px solid #9b59b6;">
+            <small>Ingresos Est./Mes</small>
+            <div style="font-size: 1.8rem; font-weight: bold; color:#9b59b6;"><?= number_format($ingresosMes, 2) ?>€</div>
+        </div>
+        <div class="card" style="border-left: 4px solid #f1c40f;">
+            <small>Siguiente Sesión</small>
+            <div style="font-size: 1.8rem; font-weight: bold;"><?= htmlspecialchars($proxima) ?></div>
+        </div>
     </div>
-  <?php else: ?>
-    <h2>Inscritos en <?=htmlspecialchars($cldata['disciplina'])?> (<?=htmlspecialchars(date('d/m/Y H:i', strtotime($cldata['fecha_hora'])))?>)</h2>
-    <?php if($ins): ?>
-      <table class="table">
-        <thead><tr><th>Nombre</th><th>Email</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody>
-        <?php foreach($ins as $i): ?>
-          <tr>
-            <td><?=htmlspecialchars($i['nombre']).' '.htmlspecialchars($i['apellidos'])?></td>
-            <td><?=htmlspecialchars($i['email'])?></td>
-            <td><?=htmlspecialchars($i['estado'])?></td>
-            <td>
-              <form method="POST" style="display:inline">
-                <input type="hidden" name="action" value="marcar" />
-                <input type="hidden" name="usuario_id" value="<?=htmlspecialchars($i['usuario_id'])?>" />
-                <input type="hidden" name="clase_id" value="<?=htmlspecialchars($clase_id)?>" />
-                <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($_SESSION['csrf_token'])?>" />
-                <button class="btn-primary" type="submit">Marcar presente</button>
-              </form>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
+
+    <?php if($msg): ?><div style="background:rgba(46, 204, 113, 0.2); color:#2ecc71; padding:15px; border-radius:8px; margin-bottom:20px;"><?=$msg?></div><?php endif; ?>
+
+    <section style="margin-bottom:50px;">
+        <h2 style="text-align:center;">🏆 Ranking Top 3 🏆</h2>
+        <?php include __DIR__ . '/../templates/podium.php'; ?>
+    </section>
+
+    <?php if(!$clase_id): ?>
+        <h2>Gestión de Clases</h2>
+        <div class="cards-grid">
+            <?php 
+            $stmt = $pdo->query("SELECT c.*, d.nombre as disciplina, (SELECT COUNT(*) FROM inscripciones WHERE clase_id = c.id) as inscritos FROM clases c JOIN disciplinas d ON c.disciplina_id = d.id ORDER BY fecha_hora DESC");
+            foreach($stmt->fetchAll() as $c): ?>
+                <div class="card">
+                    <h3><?= htmlspecialchars($c['disciplina']) ?></h3>
+                    <p><?= date('d/m/Y H:i', strtotime($c['fecha_hora'])) ?></p>
+                    <p>Inscritos: <?= $c['inscritos'] ?>/<?= $c['cupo'] ?></p>
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <a href="clases.php?clase_id=<?=$c['id']?>" class="btn-outline" style="flex:1; text-align:center;">Ver Alumnos</a>
+                        <?php if($_SESSION['usuario']['rol'] === 'admin'): ?>
+                            <form method="POST" onsubmit="return confirm('¿Borrar clase?');">
+                                <input type="hidden" name="action" value="delete"><input type="hidden" name="clase_id" value="<?=$c['id']?>">
+                                <input type="hidden" name="csrf_token" value="<?=$_SESSION['csrf_token']?>"><button type="submit" class="btn-danger">🗑️</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
     <?php else: ?>
-      <p>No hay inscritos.</p>
+        <a href="clases.php" style="color:var(--accent-2);">← Volver</a>
+        <h2 style="margin-top:20px;">Lista de Asistencia</h2>
+        <table class="table">
+            <thead><tr><th>Alumno</th><th>Email</th><th>Acción</th></tr></thead>
+            <tbody>
+            <?php 
+            $stmt = $pdo->prepare("SELECT u.id, u.nombre, u.apellidos, u.email FROM inscripciones i JOIN usuarios u ON i.usuario_id = u.id WHERE i.clase_id = ?");
+            $stmt->execute([$clase_id]);
+            foreach($stmt->fetchAll() as $u): 
+                $check = $pdo->prepare("SELECT id FROM asistencia WHERE usuario_id = ? AND clase_id = ?");
+                $check->execute([$u['id'], $clase_id]);
+                $asistio = $check->fetch();
+            ?>
+                <tr>
+                    <td><?=htmlspecialchars($u['nombre'].' '.$u['apellidos'])?></td>
+                    <td><?=htmlspecialchars($u['email'])?></td>
+                    <td>
+                        <?php if(!$asistio): ?>
+                            <form method="POST">
+                                <input type="hidden" name="action" value="marcar"><input type="hidden" name="clase_id" value="<?=$clase_id?>"><input type="hidden" name="usuario_id" value="<?=$u['id']?>">
+                                <input type="hidden" name="csrf_token" value="<?=$_SESSION['csrf_token']?>"><button type="submit" class="btn-primary">Presente</button>
+                            </form>
+                        <?php else: ?><span style="color:#2ecc71;">✅ Presente</span><?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
     <?php endif; ?>
-  <?php endif; ?>
 </main>
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

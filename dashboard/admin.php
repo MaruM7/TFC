@@ -21,6 +21,10 @@ require_once __DIR__ . '/../templates/header.php';
   </section>
 
   <section style="margin-top:30px">
+    <section>
+  <h2 style="text-align:center;">🏆 Mejores Alumnos 🏆</h2>
+  <?php include __DIR__ . '/../templates/podium.php'; ?>
+</section>
     <h2>Top usuarios (por puntos)</h2>
     <?php if($top): ?>
       <ul>

@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
-require_once __DIR__ . '/../config.php'; // Asegura carga de BASE_URL
+require_once __DIR__ . '/../config.php';
 $usuario = $_SESSION['usuario'] ?? null;
 ?>
 <!DOCTYPE html>
@@ -10,16 +10,18 @@ $usuario = $_SESSION['usuario'] ?? null;
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Gimnasio TFC</title>
   <link rel="stylesheet" href="<?=BASE_URL?>/public/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <header class="site-header">
   <div class="container header-inner">
     <a class="logo" href="<?=BASE_URL?>/public/index.php">GIMNASIO TFC</a>
     
-    <nav class="main-nav" aria-label="Menú principal">
+    <nav class="main-nav">
       <ul id="navList" class="nav-list">
-        <li><a href="<?=BASE_URL?>/public/index.php#clases">Clases</a></li>
-        <li><a href="<?=BASE_URL?>/public/index.php#footer">Contacto</a></li>
+        <li><a href="<?=BASE_URL?>/public/index.php">Inicio</a></li>
+        <li><a href="<?=BASE_URL?>/public/cuotas.php">Cuotas</a></li>
+        <li><a href="<?=BASE_URL?>/public/contacto.php">Contacto</a></li>
       </ul>
     </nav>
 
