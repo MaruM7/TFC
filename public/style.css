@@ -20,7 +20,7 @@
   --bg-2: #f0f2f5; 
   --card: #ffffff;
   /* CAMBIO: Ahora el header es azul clarito */
-  --header-bg: #e3f2fd; 
+  --header-bg: linear-gradient(180deg, rgba(2,6,23,0.9), rgba(2,6,23,0.8));
   --white: #1a1a1a;
   --muted: #666666; 
   --border: rgba(0,0,0,0.1); 

@@ -8,12 +8,38 @@ $usuario = $_SESSION['usuario'] ?? null;
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Gimnasio TFC</title>
+  <title>Umbral Academy | Artes Marciales</title>
   <link rel="stylesheet" href="<?=BASE_URL?>/public/style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-  
+  <link rel="icon" type="image/png" href="<?=BASE_URL?>/img/favicon.png">
+  <style>
+    /* Ajuste para que el logo y texto estén alineados */
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        color: var(--white);
+    }
+    
+    .logo img {
+        height: 45px; /* Altura ideal para la cabecera */
+        width: auto;
+        transition: transform 0.3s ease;
+    }
+
+    .logo:hover img {
+        transform: scale(1.05);
+    }
+
+    /* Invertir colores del logo en modo claro si es necesario */
+    [data-theme="light"] .logo img {
+        filter: brightness(0.8); /* Ajusta esto según cómo se vea en tu fondo claro */
+    }
+  </style>
+
   <script>
-    /* SCRIPT DE INICIALIZACIÓN: Evita el parpadeo de blanco a oscuro al cargar */
     (function() {
       const savedTheme = localStorage.getItem('theme') || 'dark';
       document.documentElement.setAttribute('data-theme', savedTheme);
@@ -24,7 +50,11 @@ $usuario = $_SESSION['usuario'] ?? null;
 
 <header class="site-header">
   <div class="container header-inner">
-    <a class="logo" href="<?=BASE_URL?>/public/index.php">GIMNASIO TFC</a>
+    <a class="logo" href="<?=BASE_URL?>/public/index.php">
+<img src="<?=BASE_URL?>/img/logo.png" 
+     alt="Logo" 
+     style="height: 40px; filter: brightness(0) invert(1);">      <span>UMBRAL ACADEMY</span>
+    </a>
     
     <nav class="main-nav">
       <ul class="nav-list">
@@ -36,8 +66,7 @@ $usuario = $_SESSION['usuario'] ?? null;
     </nav>
 
     <div class="header-actions" style="display: flex; align-items: center; gap: 15px;">
-      
-      <button id="themeToggle" class="btn-outline" style="padding: 5px 10px; border-radius: 50px; cursor: pointer; border: 1px solid var(--border); background: var(--glass);">
+      <button id="themeToggle" class="btn-outline" title="Cambiar tema">
         <span id="themeIcon">🌙</span>
       </button>
 
@@ -76,7 +105,6 @@ themeBtn.addEventListener('click', () => {
     updateThemeUI(newTheme);
 });
 
-// Inicializar el icono al cargar
 updateThemeUI(localStorage.getItem('theme') || 'dark');
 
 /* Lógica del Dropdown de Usuario */
