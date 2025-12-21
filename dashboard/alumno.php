@@ -32,14 +32,38 @@ $stmtPos->execute(['uid'=>$uid, 'uid2'=>$uid]);
 $stats = $stmtPos->fetch();
 
 // 3. MIS RANKINGS POR DISCIPLINA
-$stmtRank = $pdo->prepare('SELECT r.puntos, d.nombre as disciplina, c.nombre as cinturon FROM ranking r JOIN disciplinas d ON r.disciplina_id = d.id LEFT JOIN cinturones c ON r.cinturon_actual = c.id WHERE r.usuario_id = :uid');
+$stmtRank = $pdo->prepare('
+    SELECT r.puntos, d.nombre as disciplina, c.nombre as cinturon, c.color 
+    FROM ranking r 
+    JOIN disciplinas d ON r.disciplina_id = d.id 
+    LEFT JOIN cinturones c ON r.cinturon_actual = c.id 
+    WHERE r.usuario_id = :uid
+');
 $stmtRank->execute(['uid'=>$uid]);
 $rankings = $stmtRank->fetchAll();
 
 // 4. MIS INSCRIPCIONES
-$stmtIns = $pdo->prepare('SELECT i.*, cl.fecha_hora, d.nombre as disciplina FROM inscripciones i LEFT JOIN clases cl ON i.clase_id = cl.id LEFT JOIN disciplinas d ON cl.disciplina_id = d.id WHERE i.usuario_id = :uid ORDER BY i.fecha_inscripcion DESC');
+$stmtIns = $pdo->prepare('
+    SELECT i.*, cl.fecha_hora, d.nombre as disciplina 
+    FROM inscripciones i 
+    LEFT JOIN clases cl ON i.clase_id = cl.id 
+    LEFT JOIN disciplinas d ON cl.disciplina_id = d.id 
+    WHERE i.usuario_id = :uid 
+    ORDER BY i.fecha_inscripcion DESC
+');
 $stmtIns->execute(['uid'=>$uid]);
 $inscripciones = $stmtIns->fetchAll();
+
+// 5. RESPUESTAS DE ADMIN
+$stmtResp = $pdo->prepare("
+    SELECT r.respuesta, r.fecha_respuesta, m.mensaje as mi_duda 
+    FROM respuestas_admin r 
+    JOIN mensajes_contacto m ON r.mensaje_id = m.id 
+    WHERE m.usuario_id = ? 
+    ORDER BY r.fecha_respuesta DESC
+");
+$stmtResp->execute([$uid]);
+$notificaciones = $stmtResp->fetchAll();
 
 require_once __DIR__ . '/../templates/header.php';
 ?>
@@ -72,33 +96,66 @@ require_once __DIR__ . '/../templates/header.php';
         <section class="card">
             <h2>Mis Disciplinas</h2>
             <?php if($rankings): foreach($rankings as $r): ?>
-                <div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <strong><?=htmlspecialchars($r['disciplina'])?>:</strong> <?=htmlspecialchars($r['puntos'])?> pts (Cinturón: <?=htmlspecialchars($r['cinturon'] ?? 'Blanco')?>)
+                <div style="padding:15px 0; border-bottom:1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong><?=htmlspecialchars($r['disciplina'])?></strong><br>
+                        <small style="color:var(--muted)"><?=htmlspecialchars($r['puntos'])?> pts acumulados</small>
+                    </div>
+                    <span style="background:var(--glass); border: 1px solid <?= $r['color'] ?? 'var(--border)' ?>; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold;">
+                        🥋 <?=htmlspecialchars($r['cinturon'] ?? 'Blanco')?>
+                    </span>
                 </div>
-            <?php endforeach; else: ?><p>No tienes actividad registrada.</p><?php endif; ?>
+            <?php endforeach; else: ?>
+                <p>No tienes actividad registrada.</p>
+            <?php endif; ?>
         </section>
 
         <section class="card">
             <h2>Próximas Clases</h2>
-            <table class="table">
-                <thead><tr><th>Clase</th><th>Fecha</th><th>Acción</th></tr></thead>
-                <tbody>
-                <?php foreach($inscripciones as $ins): if($ins['clase_id']): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($ins['disciplina']) ?></td>
-                        <td><?= date('d/m/Y H:i', strtotime($ins['fecha_hora'])) ?></td>
-                        <td>
-                            <form method="POST" action="<?=BASE_URL?>/public/cancelar_inscripcion.php">
-                                <input type="hidden" name="id" value="<?=$ins['id']?>">
-                                <input type="hidden" name="csrf_token" value="<?=$_SESSION['csrf_token']?>">
-                                <button type="submit" class="btn-danger" style="padding:4px 8px; font-size:0.7rem;">Cancelar</button>
-                            </form>
-                        </td>
-                    </tr>
-                <?php endif; endforeach; ?>
-                </tbody>
-            </table>
+            <div style="overflow-x: auto;">
+                <table class="table">
+                    <thead><tr><th>Clase</th><th>Fecha</th><th>Acción</th></tr></thead>
+                    <tbody>
+                    <?php foreach($inscripciones as $ins): if($ins['clase_id']): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($ins['disciplina']) ?></td>
+                            <td><?= date('d/m/Y H:i', strtotime($ins['fecha_hora'])) ?></td>
+                            <td>
+                                <form method="POST" action="<?=BASE_URL?>/public/cancelar_inscripcion.php">
+                                    <input type="hidden" name="id" value="<?=$ins['id']?>">
+                                    <input type="hidden" name="csrf_token" value="<?=$_SESSION['csrf_token'] ?? ''?>">
+                                    <button type="submit" class="btn-danger" style="padding:4px 8px; font-size:0.7rem;">Cancelar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endif; endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </div>
+
+    <?php if($notificaciones): ?>
+        <section class="card" style="margin-top:40px; border-top: 4px solid #3498db;">
+            <h2 style="margin-bottom:20px;">💬 Respuestas de Administración</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <?php foreach($notificaciones as $n): ?>
+                    <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">
+                                Sobre tu consulta: "<i><?= htmlspecialchars($n['mi_duda']) ?></i>"
+                            </p>
+                            <p style="margin:0;"><strong>Admin respondió:</strong><br>
+                            <?= nl2br(htmlspecialchars($n['respuesta'])) ?></p>
+                        </div>
+                        <p style="text-align:right; font-size:0.7rem; color:var(--muted); margin:0; margin-top:15px;">
+                            <?= date('d/m/Y H:i', strtotime($n['fecha_respuesta'])) ?>
+                        </p>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
 </main>
+
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>
