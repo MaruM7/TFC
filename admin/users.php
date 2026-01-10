@@ -1,4 +1,5 @@
 <?php
+// 1. IMPORTANTE: Esto debe ser siempre la primera línea para cargar la sesión
 require_once __DIR__ . '/../config.php';
 
 // Seguridad: Solo el administrador puede gestionar usuarios
@@ -10,28 +11,44 @@ if(!isset($_SESSION['usuario']) || $_SESSION['usuario']['rol'] !== 'admin'){
 $msg = $_SESSION['msg'] ?? null;
 unset($_SESSION['msg']);
 
-// --- 1. LÓGICA DE ACTUALIZACIÓN DE ESTADO (POST) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_status') {
+// --- LÓGICA DE ACCIONES (POST) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    // Verificación de seguridad CSRF común para todas las acciones
     if(!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) { die('Error de validación CSRF'); }
     
     $uid = (int)$_POST['usuario_id'];
-    $nuevoEstado = (int)$_POST['nuevo_estado'];
-    
-    // Evitar que el admin se desactive a sí mismo por error
-    if ($uid == $_SESSION['usuario']['id']) {
-        $_SESSION['msg'] = "❌ No puedes desactivar tu propia cuenta de administrador.";
-    } else {
-        $stmt = $pdo->prepare("UPDATE usuarios SET activo = :estado WHERE id = :id");
-        $stmt->execute(['estado' => $nuevoEstado, 'id' => $uid]);
-        $texto = $nuevoEstado ? 'activado' : 'suspendido';
-        $_SESSION['msg'] = "✅ Usuario $texto correctamente.";
+
+    // ACCIÓN 1: ELIMINAR USUARIO
+    if ($_POST['action'] === 'delete_user') {
+        if ($uid == $_SESSION['usuario']['id']) {
+            $_SESSION['msg'] = "❌ No puedes eliminar tu propia cuenta.";
+        } else {
+            $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = ?");
+            $stmt->execute([$uid]);
+            $_SESSION['msg'] = "🗑️ Usuario eliminado permanentemente.";
+        }
     }
     
+    // ACCIÓN 2: CAMBIAR ESTADO (SUSPENDER/ACTIVAR)
+    elseif ($_POST['action'] === 'toggle_status') {
+        $nuevoEstado = (int)$_POST['nuevo_estado'];
+        
+        if ($uid == $_SESSION['usuario']['id']) {
+            $_SESSION['msg'] = "❌ No puedes desactivar tu propia cuenta de administrador.";
+        } else {
+            $stmt = $pdo->prepare("UPDATE usuarios SET activo = :estado WHERE id = :id");
+            $stmt->execute(['estado' => $nuevoEstado, 'id' => $uid]);
+            $texto = $nuevoEstado ? 'activado' : 'suspendido';
+            $_SESSION['msg'] = "✅ Usuario $texto correctamente.";
+        }
+    }
+
+    // Redirección limpia para evitar reenvío de formularios
     header('Location: users.php' . (isset($_GET['search']) ? '?search='.$_GET['search'] : ''));
     exit;
 }
 
-// --- 2. LÓGICA DE BÚSQUEDA Y FILTRADO (GET) ---
+// --- LÓGICA DE BÚSQUEDA Y FILTRADO (GET) ---
 $search = $_GET['search'] ?? '';
 $query = "SELECT * FROM usuarios WHERE 1=1";
 $params = [];
@@ -106,9 +123,10 @@ require_once __DIR__ . '/../templates/header.php';
                                 <span style="color:#e74c3c; font-size:0.8rem;">● Suspendido</span>
                             <?php endif; ?>
                         </td>
-                        <td style="text-align:right;">
+                        <td style="text-align:right; white-space: nowrap;">
                             <?php if($u['id'] != $_SESSION['usuario']['id']): ?>
-                                <form method="POST" style="display:inline;">
+                                
+                                <form method="POST" style="display:inline-block; margin-right:5px;">
                                     <input type="hidden" name="action" value="toggle_status">
                                     <input type="hidden" name="usuario_id" value="<?= $u['id'] ?>">
                                     <input type="hidden" name="nuevo_estado" value="<?= $u['activo'] ? 0 : 1 ?>">
@@ -118,6 +136,14 @@ require_once __DIR__ . '/../templates/header.php';
                                         <?= $u['activo'] ? 'Suspender' : 'Activar' ?>
                                     </button>
                                 </form>
+
+                                <form method="POST" style="display:inline-block;" onsubmit="return confirm('¿Estás seguro de eliminar a este usuario permanentemente? Esta acción no se puede deshacer.');">
+                                    <input type="hidden" name="action" value="delete_user">
+                                    <input type="hidden" name="usuario_id" value="<?= $u['id'] ?>">
+                                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                    <button type="submit" class="btn-danger" style="font-size:0.8rem; padding:5px 10px; background:#e74c3c; border-color:#c0392b;">Eliminar</button>
+                                </form>
+
                             <?php else: ?>
                                 <small style="color:var(--muted)">Sin acciones</small>
                             <?php endif; ?>

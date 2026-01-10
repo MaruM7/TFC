@@ -59,9 +59,19 @@ body {
 .main-nav a:hover { color: var(--white); background: var(--glass); }
 
 @media(max-width: 600px) {
-  .header-inner { flex-wrap: wrap; justify-content: center; gap: 10px; }
-  .main-nav { order: 2; width: 100%; display: flex; justify-content: center; }
-  .header-actions { position: absolute; right: 20px; top: 12px; }
+  .header-inner { 
+    flex-direction: column; 
+    padding: 15px 0; 
+    gap: 15px; 
+    text-align: center;
+  }
+  .header-actions { 
+    position: static !important; /* Elimina el choque con el logo */
+    width: 100%; 
+    justify-content: center; 
+  }
+  .main-nav { order: 3; width: 100%; }
+  .logo { order: 1; }
 }
 
 /* BOTONES */
