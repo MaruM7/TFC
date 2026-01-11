@@ -140,14 +140,12 @@ require_once __DIR__ . '/../templates/header.php';
         </div>
 
     <?php else: 
-        // ================= VISTA 2: LISTA DE ALUMNOS (ASISTENCIA) =================
         $stmtC = $pdo->prepare("SELECT c.*, d.nombre as disc FROM clases c JOIN disciplinas d ON c.disciplina_id = d.id WHERE c.id = ?");
         $stmtC->execute([$clase_id_view]);
         $clase_info = $stmtC->fetch();
         
         if(!$clase_info) { echo "<script>window.location='clases.php';</script>"; exit; }
 
-        // Obtenemos los alumnos y su ESTADO actual (pendiente/asistido)
         $stmtA = $pdo->prepare("SELECT u.id, u.nombre, u.apellidos, u.email, i.estado FROM inscripciones i JOIN usuarios u ON i.usuario_id = u.id WHERE i.clase_id = ?");
         $stmtA->execute([$clase_id_view]);
         $alumnos = $stmtA->fetchAll();

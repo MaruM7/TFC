@@ -1,5 +1,4 @@
 <?php
-// 1. IMPORTANTE: Esto debe ser siempre la primera línea para cargar la sesión
 require_once __DIR__ . '/../config.php';
 
 // Seguridad: Solo el administrador puede gestionar usuarios
@@ -141,7 +140,7 @@ require_once __DIR__ . '/../templates/header.php';
                                     <input type="hidden" name="action" value="delete_user">
                                     <input type="hidden" name="usuario_id" value="<?= $u['id'] ?>">
                                     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                                    <button type="submit" class="btn-danger" style="font-size:0.8rem; padding:5px 10px; background:#e74c3c; border-color:#c0392b;">Eliminar</button>
+                                    <button type="submit" class="btn-danger" style="font-size:0.8rem; padding:5px 10px; background:#e74c3c; border-color:#c0392b; color:white;">Eliminar</button>
                                 </form>
 
                             <?php else: ?>

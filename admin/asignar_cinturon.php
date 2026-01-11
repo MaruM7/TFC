@@ -11,8 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $disciplina_id = $_POST['disciplina_id'];
     $cinturon_id = $_POST['cinturon_id'];
 
-    // Usamos ON DUPLICATE KEY UPDATE para sobrescribir el cinturón si ya existe la fila
-    // Importante: No tocamos la columna 'puntos' para que el alumno no pierda su progreso
     $stmt = $pdo->prepare("
         INSERT INTO ranking (usuario_id, disciplina_id, cinturon_actual) 
         VALUES (?, ?, ?) 
@@ -25,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $alumnos = $pdo->query("SELECT id, nombre, apellidos FROM usuarios WHERE rol = 'alumno'")->fetchAll();
 $disciplinas = $pdo->query("SELECT id, nombre FROM disciplinas")->fetchAll();
-// Obtenemos cinturones para el JavaScript
 $cinturones = $pdo->query("SELECT * FROM cinturones ORDER BY nivel ASC")->fetchAll();
 
 require_once __DIR__ . '/../templates/header.php';
